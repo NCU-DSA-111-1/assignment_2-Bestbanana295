@@ -413,7 +413,7 @@ void rulesOfAllKindsOfChessPieces()
     else if (array[xi][yi] == R(兵))
     {
         if (xi > xj)
-            isStandard = 0;//如果倒退，則不符合規範
+            isStandard = 0;
 
         if (xi > 4) {
             if ((xj == xi+1 && yi ==yj)|| (xj == xi && yi ==yj+1)||(xj == xi && yi ==yj-1))
