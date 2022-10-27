@@ -10,7 +10,7 @@
         │ 
         │   
         ├──src/         # C code
-        │   └── ...
+        │   
         │
         ├──build.sh     # bash script
         ├──Makefile     # make file
