@@ -20,4 +20,8 @@
 ```sh
     cd bin
     ./shogi # Run
+<<<<<<< HEAD:README.md
 ```
+=======
+    ```
+>>>>>>> 8a305fa4e31ac9b1c79db97a5bfc92a0128b068f:README
