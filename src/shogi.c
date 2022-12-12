@@ -15,6 +15,21 @@ void blackMove();
 void rulesOfAllKindsOfChessPieces();
 //判斷遊戲結束
 void isGameOver();
+//判斷是否有旗子
+int isFlag(int x,int y);    
+
+//save chesssboard to file
+void saveChessboard();
+
+//load chessboard from file
+void loadChessboard();
+
+//restart game
+void restartGame();
+
+
+
+
 
 //**************************主函數******************************
 int main()
@@ -47,6 +62,12 @@ int main()
     
 }
 
+
+struct node {
+    int num;
+    struct node* left;
+    struct node* right;
+};
 
 //生成棋盤
 void chessboardBuilding()
@@ -129,8 +150,13 @@ void redMove()
     scanf("%d %d",&xi,&yi);
     printf("[紅棋]請輸入你要放置的位置:\n");
     scanf("%d %d",&xj,&yj);
+    printf("是否要儲存棋盤?(1:是 0:否)\n");
+    scanf("%d",&save);
     rulesOfAllKindsOfChessPieces();
     printChessboard();
+    if (save) {
+        saveChessboard();
+    }
 }
 
 //藍棋移動
@@ -144,8 +170,13 @@ void blackMove()
     scanf("%d %d",&xi,&yi);
     printf("[藍棋]請輸入你要放置的位置:\n");
     scanf("%d %d",&xj,&yj);
+    printf("是否要儲存棋盤?(1:是 0:否)\n");
+    scanf("%d",&save);
     rulesOfAllKindsOfChessPieces();
     printChessboard();
+    if (save){
+        saveChessboard();
+    }
 }
 
 //判斷遊戲結束
@@ -167,6 +198,7 @@ void isGameOver()
     if ((sign_r == 0)||(sign_b == 0)) {
         gameOverSign = 0;
     }
+    
 }
 
 //每種棋子的規則
@@ -546,4 +578,41 @@ void rulesOfAllKindsOfChessPieces()
         restart = 1;
         }
 }
+
+
+void saveChessboard()
+{
+    FILE *fp;
+    fp = fopen("chessboard.txt", "w");
+    for (int i = 0; i < NumberofChess; i++)
+    {
+        for (int j = 0; j < 9; j++)
+        {
+            fprintf(fp, "%s", array[i][j]);
+        }
+    }
+    fclose(fp);}
+
+void loadChessboard()
+{
+    FILE *fp;
+    fp = fopen("chessboard.txt", "r");
+    for (int i = 0; i < NumberofChess; i++)
+    {
+        for (int j = 0; j < 9; j++)
+        {
+            fscanf(fp, "%s", array[i][j]);
+        }
+    }
+    fclose(fp);
+}
+void restartgame()
+{
+    if (restart == 1)
+    {
+        printf("Invalid move, please try again\n");
+        restart = 0;
+    }
+}
+
 
