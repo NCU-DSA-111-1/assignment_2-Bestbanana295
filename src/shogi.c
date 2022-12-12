@@ -535,7 +535,7 @@ void rulesOfAllKindsOfChessPieces()
 
 //B（金）----------------------------------------
     else if (array[xi][yi] == B(金))
-    {
+    {	//八方除了斜後方
         if (xj == xi-1 && yj == yi+1 && (redOrBlack (xj,yj)!=-1)||xj == xi-1 && yj == yi-1 && (redOrBlack (xj,yj)!=-1)||xj == xi-1 && yj == yi && (redOrBlack (xj,yj)!=-1) ||xj == xi && yj+1 == yi && (redOrBlack (xj,yj)!=-1) ||xj == xi && yj-1 == yi && (redOrBlack (xj,yj)!=-1) ||xj == xi+1 && yj == yi && (redOrBlack (xj,yj)!=-1) )
         {
             array[xi][yi] = CROSS;
