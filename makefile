@@ -26,4 +26,3 @@ $(PROG_NAME): copy
 
 clean:
 	rm -f $(BIN_DIR)/$(PROG_NAME) $(OBJ_DIR)/*.o $(BIN_DIR)/main.o
-	
