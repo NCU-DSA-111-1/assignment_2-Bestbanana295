@@ -16,7 +16,7 @@ all: $(PROG_NAME)
 
 
 compile:
-	$(CC) $(CFLAG) $(SRC_LIST) -I $(INC_DIR) -c
+	$(CC) $(SRC_LIST) -I $(INC_DIR) -c
 # gcc -Wall src/main.c src/sta ... -I ./
 copy: compile
 	@mv $(notdir $(SRC_LIST:.c=.o)) $(OBJ_DIR)/

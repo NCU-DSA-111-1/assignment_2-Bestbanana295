@@ -19,3 +19,5 @@ int xj,yj;//移動的目標位置
 bool isStandard = 1;//是否符合規則，初始值1，符合
 bool gameOverSign = 1;//遊戲是否結束，0結束
 bool restart = 0;
+int save;//存儲棋子
+

@@ -34,8 +34,14 @@ void restartGame();
 //**************************主函數******************************
 int main()
 {
+    //load chessboard from file
+    loadChessboard();
+    //判斷是否有棋盤
+    if (array[0][0] == NULL) {
+        //生成棋盤
+        chessboardBuilding();
+    }
     //生成棋盤
-    chessboardBuilding();
     //打印棋盤
     printChessboard();
     //開始下棋
@@ -80,7 +86,6 @@ void chessboardBuilding()
         }
         printf("\n");
     }
-
     
 
     array[0][0] = array[0][8] = R(香);
@@ -108,20 +113,21 @@ void chessboardBuilding()
 }
 
 //棋盤
-void printChessboard()
-{
-	system("clear");
-    
 
-    printf("  \033[43;3m日本將棋\033[0m\n\n");
-    for (int i = 0; i <NumberofChess;  i ++) {
-        for (int j = 0; j < 9; j ++) {
-            printf("%s",array[i][j]);
+void printChessboard()
+{   system("clear");
+    printf("   1  2  3  4  5  6  7  8  9\n");
+    for (int i = 0; i < NumberofChess; i++)
+    {
+        printf("%d", i + 1);
+        for (int j = 0; j < 9; j++)
+        {
+            printf(" %s", array[i][j]);
         }
         printf("\n");
     }
-
 }
+
 
 //判斷是紅棋還是藍棋,紅旗返回1,藍棋返回-1,否則返回0
 int redOrBlack(int x,int y)
@@ -594,7 +600,10 @@ void saveChessboard()
     fclose(fp);}
 
 void loadChessboard()
-{
+{   
+    int load;
+    scanf("Do you wanna load file: %d", &load);
+    if (load == 1){
     FILE *fp;
     fp = fopen("chessboard.txt", "r");
     for (int i = 0; i < NumberofChess; i++)
@@ -605,6 +614,10 @@ void loadChessboard()
         }
     }
     fclose(fp);
+    }
+    else{
+        printf("Please start a new game");
+    }
 }
 void restartgame()
 {
@@ -614,5 +627,4 @@ void restartgame()
         restart = 0;
     }
 }
-
 
