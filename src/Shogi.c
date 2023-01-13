@@ -189,7 +189,7 @@ void init_chessboard(struct Chessboard *chessboard) {
                 }
             }
             else if (i == 2) {
-                current->piece = R(兵);
+                current->piece = R(步);
                 current->color = "r";
                 
 
@@ -235,7 +235,7 @@ void init_chessboard(struct Chessboard *chessboard) {
                 }
             }
             else if (i == 6){
-                current->piece = B(兵);
+                current->piece = B(步);
                 current->color = "b";
                 
                 }
@@ -566,7 +566,7 @@ void chessrule(struct Chessboard *chessboard, int curr_row, int curr_col, int ne
     // Save the piece and color to move
     piece_to_move = current->piece;
     color_to_move = current->color;
-    if (piece_to_move == R(兵)){
+    if (piece_to_move == R(步)){
         if (new_row == curr_row + 1 && new_col == curr_col){
             isStandard = 1;
         }
@@ -576,7 +576,7 @@ void chessrule(struct Chessboard *chessboard, int curr_row, int curr_col, int ne
             restart = 1;
         }
         }
-    else if (piece_to_move == B(兵)){
+    else if (piece_to_move == B(步)){
         if (new_row == curr_row - 1 && new_col == curr_col){
             isStandard = 1;
         }
