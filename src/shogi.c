@@ -1,205 +1,528 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <assert.h>
+#include <unistd.h>
+#include <math.h>
+#include <time.h>
 
 
-#include "head.h"
-//生成棋盤
-void chessboardBuilding();
-//打印棋盤
-void printChessboard();
-//判斷是紅棋還是藍棋,紅旗返回1,藍棋返回-1,否則返回0
-int redOrBlack(int x,int y);
-//紅棋移動
-void redMove();
-//藍棋移動
-void blackMove();
-//每種棋子的規則
-void rulesOfAllKindsOfChessPieces();
+#define clear() printf("\033[H\033[J")
+#define BLUE "\x1b[34;47m"
+#define RED "\x1b[31;47m"
+
+#define R(piece) "\033[31m"#piece"\033[0m"//紅色棋子
+//#define B(piece) "\033[30m"#piece"\033[0m"//黑色棋子
+#define B(piece) "\033[36m"#piece"\033[0m"//藍色棋子
+
+
+bool isStandard = 1;//是否符合規則，初始值1，符合
+bool gameOverSign = 1;//遊戲是否結束，0結束
+bool restart = 0;
+
+int curr_row,curr_col;//目前位置
+int new_row,new_col;//移動的目標位置
+int save; //存取棋子
+int load; //讀取棋子
+
 //判斷遊戲結束
 void isGameOver();
 //判斷是否有旗子
-int isFlag(int x,int y);    
-
-//save chesssboard to file
-void saveChessboard();
-
-//load chessboard from file
-void loadChessboard();
-
-//restart game
-void restartGame();
-
-
+int isFlag(int x,int y);  
+void save_game();
+void load_game();
+void push();
+struct Chessboard *pop();
+void undo();
+void redo();
+char* c[9][9];
+struct Stack undo_stack;
+struct Stack redo_stack;
 
 
 
-//**************************主函數******************************
-int main()
-{
-    //load chessboard from file
-    loadChessboard();
-    //判斷是否有棋盤
-    if (array[0][0] == NULL) {
-        //生成棋盤
-        chessboardBuilding();
+
+struct Square {
+    char *piece;
+    char *color;
+    struct Square *up;
+    struct Square *down;
+    struct Square *left;
+    struct Square *right;
+};
+
+struct Chessboard {
+    struct Square *first;
+};
+
+void init_chessboard(struct Chessboard *chessboard) {
+
+
+    
+    int i, j;
+    struct Square *current, *prev, *firstofFile, *first,*lastrank;
+    chessboard->first = (struct Square *)malloc(sizeof(struct Square));
+    firstofFile = chessboard->first;
+    //Create First Node
+    current = chessboard->first;
+    current->left = NULL;
+    //Create Right Node 
+    current->right = (struct Square *)malloc(sizeof(struct Square));
+    // Double link
+    current->right->left = current;
+    //up,down and left is Null
+    current->up = NULL;
+    current->left = NULL;
+    current->down = NULL;
+
+
+
+    for (i = 0; i < 9; i++) {
+
+        for (j = 0; j < 9; j++) {
+            if (i == 0){
+            //only create right node
+            prev = current;
+            //move to right
+            current = current->right;
+            //sturct right and connect
+            current->right = (struct Square *)malloc(sizeof(struct Square));
+
+            current->right->left = current;
+           
+
+
+            current->right->up = NULL;
+            current->right->down = NULL;
+            current->right->right = NULL;
+        }
+            else if(i == 8){
+            // struct right node and connect up
+            prev = current;
+            //move to right
+            current = current->right;
+            current->right = (struct Square *)malloc(sizeof(struct Square));
+            current->right->left = current;
+            current->right->up = lastrank;
+            current->right->down = NULL;
+            current->right->right = NULL;
+            }
+            else{
+            // create right node and connect up
+            prev = current;
+            //move to right
+            current = current->right;
+            lastrank = lastrank -> right;
+            //sturct right and connect  
+            current->right = (struct Square *)malloc(sizeof(struct Square));
+            current->right->left = current;
+            //connect up and down
+            current->up = lastrank;
+            lastrank -> down = current;
+
+
+            }
+        }
+
+        if (i != 9) {
+            prev = current;
+            lastrank =firstofFile;
+            current = firstofFile;
+            //create down node
+            current->down = (struct Square *)malloc(sizeof(struct Square));
+            current->down->up = current;
+            current->down->right = NULL;
+            current->down->left = NULL;
+            current->down->down = NULL;
+            firstofFile = current->down;
+
+            //prev->down = current->down;
+            current->down->left = NULL;
+            current->down->right = (struct Square *)malloc(sizeof(struct Square));
+            current->down->right->left = current->down;
+            current = current->down;
+
+        }
     }
-    //生成棋盤
-    //打印棋盤
-    printChessboard();
-    //開始下棋
-    int turn = -1;
+    firstofFile = chessboard->first;
+    current = chessboard->first;
+    for (i = 0; i < 9; i++) {
+        for (j = 0; j < 9; j++) {
+            if (i == 0) {
+                if (j == 0 || j == 8) {
+                    current->piece = R(香);
+                    current->color = "r";
+
+                } else if (j == 1 || j == 7) {
+                    current->piece = R(桂);
+                    current->color = "r";
+
+                } else if (j == 2 || j == 6) {
+                    current->piece = R(銀);
+                    current->color = "r";
+
+                } else if (j == 3|| j == 5) {
+                    current->piece = R(金);
+                    current->color = "r";
+
+                } else if (j == 4) {
+                    current->piece = R(將);
+                    current->color = "r";
+
+                }
+            } 
+            else if (i==1){
+                if(j == 1){
+                    current->piece = R(飛);
+                    current->color = "r";
+                    
+                }
+                else if(j == 7){
+                    current->piece = R(角);
+                    current->color = "r";
+                    
+                }
+                else{
+                    current->piece = "  ";
+                    current->color = "n";
+                }
+            }
+            else if (i == 2) {
+                current->piece = R(兵);
+                current->color = "r";
+                
+
+            } 
+            else if (i == 8) {
+                if (j == 0 || j == 8) {
+                    current->piece = B(香);
+                    current->color = "b";
+                    
+                } else if (j == 1 || j == 7) {
+                    current->piece = B(桂);
+                    current->color = "b";
+                    
+                } else if (j == 2 || j == 6) {
+                    current->piece = B(銀);
+                    current->color = "b";
+                    
+                } else if (j == 3 || j == 5) {
+                    current->piece = B(金);
+                    current->color = "b";
+                    
+                } else if (j == 4) {
+                    current->piece = B(將);
+                    current->color = "b";
+                    
+                }
+            } 
+
+            else if (i == 7) {
+                if(j == 1){
+                    current->piece = B(角);
+                    current->color = "b";
+                    
+                }
+                else if(j == 7){
+                    current->piece = B(飛);
+                    current->color = "b";
+                    
+                }
+                else{
+                    current->piece = "  ";
+                    current->color = "n";
+                }
+            }
+            else if (i == 6){
+                current->piece = B(兵);
+                current->color = "b";
+                
+                }
+            else{
+                current->piece = "  ";
+                current->color = "n";
+            }
+            current = current->right;
+        
+        }
+    current = firstofFile->down;
+    firstofFile = current;
+    }
+    }   
+    
+    
+
+void print_chessboard(struct Chessboard *chessboard) {
+    clear();
+
+    printf("        日本將棋        \n\n\n\n");
+    printf("1  2  3  4  5  6  7  8  9 \n");
+    
+    int i, j;
+    struct Square *current;
+    struct Square *firstofFile;
+    current = chessboard->first;
+    firstofFile = chessboard->first;
+    for (i = 0; i < 9; i++) {
+        ;
+        for (j = 0; j < 9; j++) {
+
+            printf( "%s ",current->piece);
+            current = current->right;
+        }
+        printf("%d",i+1);
+        printf("\n");
+        current = firstofFile->down;
+        firstofFile = current;
+        
+    }
+    printf("\x1b[0m");
+}
+
+
+void move_piece(struct Chessboard *chessboard, int curr_row, int curr_col, int new_row, int new_col) {
+    struct Square *current = chessboard->first;
+    struct Square *current1 = chessboard->first;
+    int i, j;
+    char* piece_to_move, *color_to_move;
+
+    push(&undo_stack, chessboard);
+    // Find the current position of the piece
+    for (i = 0; i < curr_row; i++) {
+        current = current->down;
+    }
+    for (j = 0; j < curr_col; j++) {
+        current = current->right;
+    }
+
+
+    // Save the piece and color to move
+    piece_to_move = current->piece;
+    color_to_move = current->color;
+
+    // Move to the new position
+
+    for (i = 0; i < new_row; i++) {
+        current1 = current1->down;
+    }
+    for (j = 0; j < new_col; j++) {
+        current1 = current1->right;
+    }
+
+
+    if (current1->color == color_to_move) {
+        printf("違反遊戲規則，請重新輸入\n");
+        restart = 1;
+    }
+    else{
+    // Clear the current position
+        current->piece = "  ";
+        current->color = "n";
+    // Update the new position
+        current1->piece = piece_to_move;
+        current1->color = color_to_move;
+    }
+}
+
+
+
+bool BorR(struct Chessboard *chessboard, int curr_row, int curr_col)
+{ struct Square *current = chessboard->first;
+    struct Square *current1 = chessboard->first;
+    int i, j;
+    char* piece_to_move, *color_to_move;
+    // Find the current position of the piece
+    for (i = 0; i < curr_row; i++) {
+        current = current->down;
+    }
+    for (j = 0; j < curr_col; j++) {
+        current = current->right;
+    }
+    // Save the piece and color to move
+    piece_to_move = current->piece;
+    color_to_move = current->color;
+    if (color_to_move == "b"){
+        return 1;
+    }
+    else if (color_to_move == "r"){
+        return 0;
+    }
+
+}
+
+//紅棋移動
+void redMove(struct Chessboard *chessboard)
+{
+    if (restart) {
+        printf("違反遊戲規則，請重新輸入\n");
+        restart = 0;
+    }
+
+    
+    int curr_row,curr_col,new_row,new_col,save;
+    
+    printf("[紅棋]請輸入你要移動的棋子:\n");
+    scanf("%d %d",&curr_row ,&curr_col);
+    curr_col = curr_col - 1;
+    curr_row = curr_row - 1;
+
+    if (BorR(chessboard,curr_row,curr_col) == 0){;
+    }
+    else {       
+
+        restart = 1;
+    }
+    printf("[紅棋]請輸入你要放置的位置:\n");
+    scanf("%d %d",&new_row,&new_col);
+    new_col = new_col-1;
+    new_row = new_row-1;
+
+    //chessrule();   
+
+    move_piece(chessboard,curr_row,curr_col,new_row,new_col);
+    
+    print_chessboard(chessboard);
+}
+
+//藍棋移動
+void blueMove(struct Chessboard *chessboard)
+{
+    if (restart) {
+        printf("違反遊戲規則，請重新輸入\n");
+        restart = 0;
+    }
+
+    
+    printf("[藍棋]請輸入你要移動的棋子:\n");
+    scanf("%d %d",&curr_row,&curr_col);
+    curr_col = curr_col - 1;
+    curr_row = curr_row - 1;
+
+    if (BorR(chessboard,curr_row,curr_col) == 1){;
+    }
+    else {restart = 1;
+    }
+    printf("[藍棋]請輸入你要放置的位置:\n");
+    scanf("%d %d",&new_row,&new_col);
+    new_col = new_col-1;
+    new_row = new_row-1;
+    if (save == 1){
+        save_game(chessboard,c);
+    }
+    else if (save == 0){
+        printf("棋盤未儲存\n");
+    }
+    else{
+        printf("輸入錯誤\n");
+    }
+    //chessrule();
+    move_piece(chessboard,curr_row,curr_col,new_row,new_col);
+
+    print_chessboard(chessboard);
+
+}
+
+
+
+
+
+
+int main() {
+    struct Chessboard chessboard;
+
+    init_chessboard(&chessboard);
+    
+    printf("\033[40m");
+    printf("Do you want to load the game?(1:yes 0:no)\n 維修中 請輸入 0 : ");
+    scanf("%d",&load);
+    if (load == 1){
+        load_game(&chessboard,"oldchessboard.txt");
+    }
+    else if (load == 0){
+        printf("New game\n");
+    }
+    else{
+        printf("輸入錯誤\n");
+    }
+    print_chessboard(&chessboard);
+    int turn = -1;//紀錄輪到誰下棋，1為紅方，-1為黑方
     while (gameOverSign) {
         isStandard = 1;
         turn *= (-1);//雙方交替下棋
         switch (turn) {
             case 1:
-                redMove();
+                redMove(&chessboard);
                 turn = (restart) ? (turn*-1) : turn;
+            printf("是否要儲存棋盤或悔棋?(2:undo 1:儲存 0:否)\n");
+            scanf("%d",&save); 
+            if (save == 1){
+            save_game(&chessboard,c);
+            }
+            else if (save == 0){
+            printf("棋盤未儲存\n");
+            }
+            else if (save == 2){
+            undo(&chessboard);
+            }
+            else{
+            printf("輸入錯誤\n");
+            }               
+                
                 break;
             case -1:
-                blackMove();
+                blueMove(&chessboard);
                 turn = (restart) ? (turn*-1) : turn;
-                break;
+            printf("是否要儲存棋盤?(2: undo 1:儲存 0:否)\n");
+            scanf("%d",&save); 
+            if (save == 1){
+            save_game(&chessboard,c);
+            }
+            else if (save == 0){
+            printf("棋盤未儲存\n");
+            }
+            else if (save == 2){
+                undo(&chessboard);
+            }
+            else{
+            printf("輸入錯誤\n");
+            }  
+            break;
         }
-        isGameOver();
+        isGameOver(&chessboard);
+
         
     }
     printf("遊戲結束!\n");
-    
-  
-    
+
+
+    return 0;
 }
+ 
 
 
-struct node {
-    int num;
-    struct node* left;
-    struct node* right;
-};
-
-//生成棋盤
-void chessboardBuilding()
-{
-
-    for (int i = 0; i < NumberofChess; i ++) {
-        for (int j = 0; j < 9 ; j ++) {
-            array[i][j] = CROSS;
-
-        }
-        printf("\n");
-    }
-    
-
-    array[0][0] = array[0][8] = R(香);
-    array[0][1] = array[0][7] = R(桂);
-    array[0][2] = array[0][6] = R(銀);
-    array[0][3] = array[0][5] = R(金);
-    array[0][4] = R(將);
-    array[1][1] = R(飛);
-    array[1][7] = R(角);
-    for(int i=0;i<NumberofChess;i++){
-        array[2][i] = R(兵);
-    }
-
-    
-    array[8][0] = array[8][8] = B(香);
-    array[8][1] = array[8][7] = B(桂);
-    array[8][2] = array[8][6] = B(銀);
-    array[8][3] = array[8][5] = B(金);
-    array[8][4] = B(將);
-    array[7][7] = B(飛);
-    array[7][1] = B(角);
-  for(int i=0;i<NumberofChess;i++){
-        array[6][i] = B(兵);
-    }
-}
-
-//棋盤
-
-void printChessboard()
-{   system("clear");
-    printf("   1  2  3  4  5  6  7  8  9\n");
-    for (int i = 0; i < NumberofChess; i++)
-    {
-        printf("%d", i + 1);
-        for (int j = 0; j < 9; j++)
-        {
-            printf(" %s", array[i][j]);
-        }
-        printf("\n");
-    }
-}
 
 
-//判斷是紅棋還是藍棋,紅旗返回1,藍棋返回-1,否則返回0
-int redOrBlack(int x,int y)
-{
-    if (array[x][y] == R(香) || array[x][y] == R(桂) || array[x][y] == R(銀) || array[x][y] == R(金) || array[x][y] == R(將) || array[x][y] == R(角) ||array[x][y] == R(飛)|| array[x][y] == R(兵))
-    {
-        return  1;
-    }
-    else if (array[x][y] == B(香) || array[x][y] == B(桂) || array[x][y] == B(銀) || array[x][y] == B(金) || array[x][y] == B(將) || array[x][y] == B(角)|| array[x][y] == R(飛) || array[x][y] == B(兵))
-    {
-        return -1;
-    }
-    else
-        return 0;
-}
-
-//紅棋移動
-void redMove()
-{
-    if (restart) {
-        printf("違反遊戲規則，請重新輸入\n");
-        restart = 0;
-    }
-    
-    printf("[紅棋]請輸入你要移動的棋子:\n");
-    scanf("%d %d",&xi,&yi);
-    printf("[紅棋]請輸入你要放置的位置:\n");
-    scanf("%d %d",&xj,&yj);
-    printf("是否要儲存棋盤?(1:是 0:否)\n");
-    scanf("%d",&save);
-    rulesOfAllKindsOfChessPieces();
-    printChessboard();
-    if (save) {
-        saveChessboard();
-    }
-}
-
-//藍棋移動
-void blackMove()
-{
-    if (restart) {
-        printf("違反遊戲規則，請重新輸入\n");
-        restart = 0;
-    }
-    printf("[藍棋]請輸入你要移動的棋子:\n");
-    scanf("%d %d",&xi,&yi);
-    printf("[藍棋]請輸入你要放置的位置:\n");
-    scanf("%d %d",&xj,&yj);
-    printf("是否要儲存棋盤?(1:是 0:否)\n");
-    scanf("%d",&save);
-    rulesOfAllKindsOfChessPieces();
-    printChessboard();
-    if (save){
-        saveChessboard();
-    }
-}
-
-//判斷遊戲結束
-void isGameOver()
+void isGameOver(struct Chessboard *chessboard)
 {
     bool sign_r = 0;
     bool sign_b = 0;
-    for (int i = 0; i < NumberofChess; i ++) {
+    struct Square *current, *firstofFile;
+    current= chessboard->first;
+    firstofFile = current;
+    for (int i = 0; i < 9; i ++) {
         for (int j = 0; j < 9; j ++) {
-            if (array[i][j] == R(將)) {
+            if (current ->piece == R(將)) {
                 sign_r = 1;
             }
-            else if (array[i][j] == B(將))
+            else if (current ->piece == B(將))
             {
                 sign_b = 1;
             }
+            current = current->right;
         }
+        current = firstofFile->down;
+        firstofFile = current;
     }
     if ((sign_r == 0)||(sign_b == 0)) {
         gameOverSign = 0;
@@ -207,424 +530,278 @@ void isGameOver()
     
 }
 
-//每種棋子的規則
-void rulesOfAllKindsOfChessPieces()
-{
-//R（香）----------------------------------------
-    if (array[xi][yi] == R(香))
-    {
-        if (yi == yj)//列坐標不變，同列移動
-        {
-            for (int i = xi+1; i < xj; i ++)
-            {
-                if (i == 5)
-                    continue;//如果行等於5，跳過
-                if (array[i][yi] != CROSS)
-                    isStandard = 0;//如果初始位置和目標位置之間有棋子，則不符合規則
-            }
-            for (int i = xi-1; i > xj; i --)
-            {
-                if (i == 5)
-                    continue;//如果行等於5，跳過
-                if (array[xi][yi] != CROSS)
-                    isStandard = 0;
-            }
-        }
 
-        
-        if ((yi == yj)&& isStandard && (redOrBlack(xj, yj) != 1))//如果棋子直行、沒有犯規且落點不是紅棋，可以移動
-        {
-            
-            array[xi][yi] = CROSS;
-            array[xj][yj] = R(香);
-        }
-        else
-        {
-            restart = 1;
-        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//Rules of all kinds of chess pieces
+
+void chessrule(struct Chessboard *chessboard, int curr_row, int curr_col, int new_row, int new_col){
+
+    struct Square *current = chessboard->first;
+    int i, j;
+    char* piece_to_move, *color_to_move;
+    // Find the current position of the piece
+    for (i = 0; i < curr_row; i++) {
+        current = current->down;
     }
-
-
-//B（香）----------------------------------------
-    else if (array[xi][yi] == B(香))
-    {
-        
-        if (yi == yj)//列坐標不變，同列移動
-        {
-            for (int i = xi+1; i < xj; i ++)
-            {
-
-                if (array[i][yi] != CROSS)
-                    isStandard = 0;//如果初始位置和目標位置之間有棋子，則不符合規則
-            }
-            for (int i = xi-1; i > xj; i --)
-            {
- 
-                if (array[i][yi] != CROSS)
-                    isStandard = 0;
-            }
-        }
-
-        if (( yi == yj)&& isStandard && redOrBlack(xj, yj) != -1)//如果棋子直行、沒有犯規且落點不是紅棋，可以移動
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = B(香);
-        }
-        else
-        {
-            restart = 1;
-        }
+    for (j = 0; j < curr_col; j++) {
+        current = current->right;
     }
-
-//R（桂）----------------------------------------
-    else if (array[xi][yi] == R(桂))
-    {
-        if ((redOrBlack(xj, yj) != 1) && ( (xj == xi+2 && yj == yi-1) || (xj == xi+2 && yj == yi+1)))
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = R(桂);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
-    
-//B（桂）----------------------------------------
-    else if (array[xi][yi] == B(桂))
-    {
-        if ((redOrBlack(xj, yj) != -1) && ( (xj == xi-2 && yj == yi+1 ) || (xj == xi-2 && yj == yi-1)))
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = B(桂);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
-    
-
-//R (角)----------------------------
-    else if (array[xi][yi] == R(角))
-    {
-
-        for (int i ; i < 5;i++){
-            ( (xj == xi-i && yj == yi-i ) || (xj == xi+i && yj == yi+i));
-        }
-        if ((redOrBlack(xj, yj) != -1) )//如果棋子斜行、沒有犯規且落點不是紅棋，可以移動
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = R(角);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
-    
-
-//B (角)
-    else if (array[xi][yi] == B(角))
-    {
-        int count = 0;//起始位置間棋子的個數
-        if (yi == yj)//列坐標不變，同列移動
-        {
-            for (int i = xi+1; i < xj; i ++)
-            {
-                if (i == 5)
-                    continue;//如果行等於5，跳過
-                if (redOrBlack(i, yi) != 0)
-                    count++;
-                
-            }
-            for (int i = xi-1; i > xj; i --)
-            {
-                if (i == 5)
-                    continue;//如果行等於5，跳過
-                if (redOrBlack(i, yi) != 0)
-                    count++;
-            }
-        }
-        else if (xi == xj)//行坐標不變，同行移動
-        {
-            for (int i = yi+1; i < yj; i ++)
-                if (redOrBlack(xi, i) != 0)
-                    count++;
-            for (int i = yi-1; i > yj; i --)
-                if (redOrBlack(xi, i) != 0)
-                    count++;
+    // Save the piece and color to move
+    piece_to_move = current->piece;
+    color_to_move = current->color;
+    if (piece_to_move == R(兵)){
+        if (new_row == curr_row + 1 && new_col == curr_col){
+            isStandard = 1;
         }
         
-        if ((xi == xj || yi == yj)&& (count <= 1) && redOrBlack(xj, yj) != -1)//如果棋子直行、沒有犯規且落點不是紅棋，可以移動
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = B(角);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
-//R(飛)
-     else if (array[xi][yi] == R(飛))
-    {
-        
-        if (yi == yj)//列坐標不變，同列移動
-        {
-            for (int i = xi+1; i < xj; i ++)
-            {
-                if (i == 5)
-                    continue;//如果行等於5，跳過
-                if (array[i][yi] != CROSS)
-                    isStandard = 0;//如果初始位置和目標位置之間有棋子，則不符合規則
-            }
-            for (int i = xi-1; i > xj; i --)
-            {
-                if (i == 5)
-                    continue;//如果行等於5，跳過
-                if (array[i][yi] != CROSS)
-                    isStandard = 0;
-            }
-        }
-        else if (xi == xj)//行坐標不變，同行移動
-        {
-            for (int i = yi+1; i < yj; i ++)
-                if (array[xi][i] != CROSS)
-                    isStandard = 0;
-            for (int i = yi-1; i > yj; i --)
-                if (array[xi][i] != CROSS)
-                    isStandard = 0;
-        }
-        if ((xi == xj || yi == yj)&& isStandard && redOrBlack(xj, yj) != -1)//如果棋子直行、沒有犯規且落點不是紅棋，可以移動
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = R(飛);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
-//B(飛)
-    else if (array[xi][yi] == B(飛))
-    {
-        
-        if (yi == yj)//列坐標不變，同列移動
-        {
-            for (int i = xi+1; i < xj; i ++)
-            {
-                if (i == 5)
-                    continue;//如果行等於5，跳過
-                if (array[i][yi] != CROSS)
-                    isStandard = 0;//如果初始位置和目標位置之間有棋子，則不符合規則
-            }
-            for (int i = xi-1; i > xj; i --)
-            {
-                if (i == 5)
-                    continue;//如果行等於5，跳過
-                if (array[i][yi] != CROSS)
-                    isStandard = 0;
-            }
-        }
-        else if (xi == xj)//行坐標不變，同行移動
-        {
-            for (int i = yi+1; i < yj; i ++)
-                if (array[xi][i] != CROSS)
-                    isStandard = 0;
-            for (int i = yi-1; i > yj; i --)
-                if (array[xi][i] != CROSS)
-                    isStandard = 0;
-        }
-        if ((xi == xj || yi == yj)&& isStandard && redOrBlack(xj, yj) != -1)//如果棋子直行、沒有犯規且落點不是紅棋，可以移動
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = B(飛);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
-    
-//R（兵）----------------------------------------
-    else if (array[xi][yi] == R(兵))
-    {
-        if (xi > xj)
+        else{
             isStandard = 0;
-
-        if (xi > 4) {
-            if ((xj == xi+1 && yi ==yj)|| (xj == xi && yi ==yj+1)||(xj == xi && yi ==yj-1))
-            {
-                
+            restart = 1;
+        }
+        }
+    else if (piece_to_move == B(兵)){
+        if (new_row == curr_row - 1 && new_col == curr_col){
+            isStandard = 1;
+        }
+        else{
+            isStandard = 0;
+            restart = 1;
+        }
+    }
+    else if (piece_to_move == R(香)){
+        if (new_col == curr_col){
+            if (new_row > curr_row){
+                isStandard = 1;
             }
-            else
+            else{
                 isStandard = 0;
-        }
-        if (xj == xi+1 && (xi == xj || yi == yj)&& isStandard && redOrBlack(xj, yj) != 1)//
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = R (兵);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
-    
-//B（兵）----------------------------------------
-    else if (array[xi][yi] == B(兵))
-    {
-        if (xi < xj)
-            isStandard = 0;//如果倒退，則不符合規範
-
-        if (xi < 4) {
-            if ((xj == xi-1 && yi ==yj)|| (xj == xi && yi ==yj+1)||(xj == xi && yi ==yj-1))
-            {
-                
+                restart = 1;
+ 
             }
-            else
+        }
+    }
+    else if (piece_to_move == B(香)){
+        if (new_col == curr_col){
+            if (new_row < curr_row){
+                isStandard = 1;
+            }
+            else{
                 isStandard = 0;
+                restart = 1;}
+
+ 
         }
-        if (xj == xi-1 && isStandard && redOrBlack(xj, yj) != -1)//
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = B(兵);
+    }
+    else if (piece_to_move == R(桂)){
+        if ((new_row == curr_row + 2 && new_col == curr_col + 1) || (new_row == curr_row + 2 && new_col == curr_col - 1) || (new_row == curr_row - 2 && new_col == curr_col + 1) || (new_row == curr_row - 2 && new_col == curr_col - 1) || (new_row == curr_row + 1 && new_col == curr_col + 2) || (new_row == curr_row + 1 && new_col == curr_col - 2) || (new_row == curr_row - 1 && new_col == curr_col + 2) || (new_row == curr_row - 1 && new_col == curr_col - 2)){
+            isStandard = 1;
         }
-        else
-        {
+        else{
+            isStandard = 0;
             restart = 1;
         }
+    }
+    else if (piece_to_move == B(桂)){
+        if ((new_row == curr_row + 2 && new_col == curr_col + 1) || (new_row == curr_row + 2 && new_col == curr_col - 1) || (new_row == curr_row - 2 && new_col == curr_col + 1) || (new_row == curr_row - 2 && new_col == curr_col - 1) || (new_row == curr_row + 1 && new_col == curr_col + 2) || (new_row == curr_row + 1)){
+
+        }
+    }
+    else if (piece_to_move == R(銀)){
+        if ((new_row == curr_row + 1 && new_col == curr_col + 1) || (new_row == curr_row + 1 && new_col == curr_col - 1) || (new_row == curr_row - 1 && new_col == curr_col + 1) || (new_row == curr_row - 1 && new_col == curr_col - 1) || (new_row == curr_row + 1 && new_col == curr_col) || (new_row == curr_row - 1 && new_col == curr_col)){
+            isStandard = 1;
+        }
+        else{
+            isStandard = 0;
+            restart = 1;
+        }
+    }
+    else if (piece_to_move == B(銀)){
+        if ((new_row == curr_row + 1 && new_col == curr_col + 1) || (new_row == curr_row + 1 && new_col == curr_col - 1) || (new_row == curr_row - 1 && new_col == curr_col + 1) || (new_row == curr_row - 1 && new_col == curr_col - 1) || (new_row == curr_row + 1 && new_col == curr_col) || (new_row == curr_row - 1 && new_col == curr_col)){
+            isStandard = 1;
+        }
+        else{
+            isStandard = 0;
+            restart = 1;
+        }
+    }
+    else if (piece_to_move == R(金)){
+        if ((new_row == curr_row + 1 && new_col == curr_col + 1) || (new_row == curr_row + 1 && new_col == curr_col - 1) || (new_row == curr_row - 1 && new_col == curr_col + 1) || (new_row == curr_row - 1 && new_col == curr_col - 1) || (new_row == curr_row + 1 && new_col == curr_col) || (new_row == curr_row - 1 && new_col == curr_col)){
+            isStandard = 1;
+        }
+        else{
+            isStandard = 0;
+            restart = 1;
+        }
+    }
+    else if (piece_to_move == B(金)){
+        if ((new_row == curr_row + 1 && new_col == curr_col + 1) || (new_row == curr_row + 1 && new_col == curr_col - 1) || (new_row == curr_row - 1 && new_col == curr_col + 1) || (new_row == curr_row - 1 && new_col == curr_col - 1) || (new_row == curr_row + 1 && new_col == curr_col) || (new_row == curr_row - 1 && new_col == curr_col)){
+            isStandard = 1;
+        }
+        else{
+            isStandard = 0;
+            restart = 1;
+        }
+        }
+    else if (piece_to_move == R(角)){
+    }
+    else if (piece_to_move == B(角)){
+
+    }
+    else if (piece_to_move == R(飛)){
+
+    }
+    else if (piece_to_move == B(飛)){
+
+    }
+    else if (piece_to_move == R(將)){
+
+    }
+    else if (piece_to_move == B(將) ) {
+
     }
 
-//R（銀）----------------------------------------
-    else if (array[xi][yi] == R(銀))
-    {
-        if ((xj == xi+1 && yj == yj+1 )&&(redOrBlack(xj, yj) != 1)  || (xj == xi+1 && yj == yi &&redOrBlack(xj, yj) != 1) || (xj == xi+1 && yj == yi-1 &&redOrBlack(xj, yj) != 1) || (xj == xi-1 && yj == yi-1 &&redOrBlack(xj, yj) != 1)|| (xj == xi-1 && yj == yi+1 &&redOrBlack(xj, yj) != 1))
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = R(銀);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
+}
+
+
+
+
+void save_game(struct Chessboard *chessboard,char* c[9][9]) {
+    int i, j;
+    struct Square *current = chessboard->first;
+    struct Square *firstofFile = chessboard->first;
+    FILE *file = fopen("oldchessgame.txt", "w");
+    char *a, *b;
     
-//B（銀）----------------------------------------
-    else if (array[xi][yi] == B(銀))
-    {
-        if (xj == xi-1 && yj == yi+1 && (redOrBlack (xj,yj)!=1)||xj == xi-1 && yj == yi-1 && ( redOrBlack (xj,yj)!=1)||xj == xi-1 && yj == yi && (redOrBlack (xj,yj)!=1) ||xj == xi+1 && yj+1 == yi && (redOrBlack (xj,yj)!=1)|| xj == xi+1 && yj-1 == yi && (redOrBlack (xj,yj)!=1) )
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = B(銀);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
+    for (i = 0; i < 9; i++) {
+        for (j = 0; j < 9; j++) {
+            a = current->piece;
+            b = current->color;
 
-//R（金）----------------------------------------
-    else if (array[xi][yi] == R(金))
-    {
-        if (xj == xi+1 && yj == yi+1 && (redOrBlack(xj,yj)!=1)||xj == xi+1 && yj == yi-1 && (redOrBlack(xj,yj)!=1)||xj == xi+1 && yj == yi && (redOrBlack(xj,yj)!=1) ||xj == xi && yj+1 == yi && (redOrBlack(xj,yj)!=1) ||xj == xi && yj-1 == yi && (redOrBlack (xj,yj)!=1) ||xj == xi-1 && yj == yi && (redOrBlack (xj,yj)!=1) )
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = R(金);
+            if (strcmp(a, " ") == 0) {
+                fprintf(file, "%s ", a);
+            }
+            else {
+                fprintf(file, "%s ", a);
+            }
+           
+            current = current->right;
         }
-        else
-        {
-            restart = 1;
-        }
+        fprintf(file, "\n");
+        current = firstofFile->down;
+        firstofFile = firstofFile->down;
     }
-
-//B（金）----------------------------------------
-    else if (array[xi][yi] == B(金))
-    {	//八方除了斜後方
-        if (xj == xi-1 && yj == yi+1 && (redOrBlack (xj,yj)!=-1)||xj == xi-1 && yj == yi-1 && (redOrBlack (xj,yj)!=-1)||xj == xi-1 && yj == yi && (redOrBlack (xj,yj)!=-1) ||xj == xi && yj+1 == yi && (redOrBlack (xj,yj)!=-1) ||xj == xi && yj-1 == yi && (redOrBlack (xj,yj)!=-1) ||xj == xi+1 && yj == yi && (redOrBlack (xj,yj)!=-1) )
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = B(金);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
-
-//R（將）----------------------------------------
-    else if (array[xi][yi] == R(將))
-    {
-        if ((xj <= 2 && yj <= 5 && yj >=3)&&(redOrBlack(xj, yj) != 1) && (((xj == xi)&&(yj == yi + 1 || yj == yi - 1))||((yj == yi)&&(xj == xi + 1 || xj == xi - 1))))
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = R(將);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
-
-//B（將）----------------------------------------
-    else if (array[xi][yi] == B(將))
-    {
-        if ((xj >= 8 && yj <= 5 && yj >=3)&&(redOrBlack(xj, yj) != -1) && (((xj == xi)&&(yj == yi + 1 || yj == yi - 1))||((yj == yi)&&(xj == xi + 1 || xj == xi - 1))))
-        {
-            array[xi][yi] = CROSS;
-            array[xj][yj] = B(將);
-        }
-        else
-        {
-            restart = 1;
-        }
-    }
-        else {
-        restart = 1;
-        }
+    fclose(file);
 }
 
 
-void saveChessboard()
-{
-    FILE *fp;
-    fp = fopen("chessboard.txt", "w");
-    for (int i = 0; i < NumberofChess; i++)
-    {
-        for (int j = 0; j < 9; j++)
-        {
-            fprintf(fp, "%s", array[i][j]);
-        }
-    }
-    fclose(fp);}
 
-void loadChessboard()
-{   
-    int load;
-    scanf("Do you wanna load file: %d", &load);
-    if (load == 1){
-    FILE *fp;
-    fp = fopen("chessboard.txt", "r");
-    for (int i = 0; i < NumberofChess; i++)
-    {
-        for (int j = 0; j < 9; j++)
-        {
-            fscanf(fp, "%s", array[i][j]);
-        }
-    }
-    fclose(fp);
-    }
-    else{
-        printf("Please start a new game");
-    }
+
+void translate(){
+
+
+    int i, j;
+    char *a, *b;
+    char *c[9][9];
+    FILE *file = fopen("oldchessgame.txt", "r");
+
+    for (i = 0; i < 9; i++) {
+        for (j = 0; j < 9; j++) {
+            fscanf(file, "%s ", c[i][j]);
+
 }
-void restartgame()
-{
-    if (restart == 1)
-    {
-        printf("Invalid move, please try again\n");
-        restart = 0;
     }
 }
 
+
+void load_game(struct Chessboard *chessboard, char *file_name) {
+    int i, j;
+    struct Square *current = chessboard->first;
+    struct Square *firstofFile = chessboard->first;
+    FILE *file = fopen(file_name, "r");
+
+    for (i = 0; i < 9; i++) {
+        for (j = 0; j < 9; j++) {
+            fscanf(file, "%s ", current->piece);
+            current = current->right;
+        }
+    current = firstofFile->down;
+    firstofFile = firstofFile->down;       
+    }
+
+    fclose(file);
+}
+
+
+
+
+struct Move {
+    struct Chessboard *chessboard;
+    struct Move *next;
+};
+
+struct Stack {
+    struct Move *top;
+};
+
+
+
+void push(struct Stack *stack, struct Chessboard *chessboard) {
+    struct Move *move = (struct Move *)malloc(sizeof(struct Move));
+    move->chessboard = chessboard;
+    move->next = stack->top;
+    stack->top = move;
+}
+
+struct Chessboard *pop(struct Stack *stack) {
+    if (stack->top == NULL) {
+        return NULL;
+    }
+    struct Chessboard *chessboard = stack->top->chessboard;
+    struct Move *temp = stack->top;
+    stack->top = stack->top->next;
+    free(temp);
+    return chessboard;
+}
+
+void undo() {
+    struct Chessboard *chessboard = pop(&undo_stack);
+    if (chessboard == NULL) {
+        printf("No more moves to undo\n");
+        return;
+    }
+
+
+    push(&redo_stack, chessboard);
+
+    print_chessboard(chessboard);
+}
+
+void redo() {
+    struct Chessboard *chessboard = pop(&redo_stack);
+    if (chessboard == NULL) {
+        printf("No more moves to redo\n");
+        return;
+    }
+
+    struct Chessboard * current_chessboard;
+    push(&undo_stack, current_chessboard);
+    current_chessboard = chessboard;
+    print_chessboard(current_chessboard);
+}
