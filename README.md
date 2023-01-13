@@ -1,6 +1,6 @@
 # 109607514_assignment2
 
-##This is a Shogi program
+## This is a Shogi program
 
 
 ## File Structure
